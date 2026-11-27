@@ -1,0 +1,26 @@
+name: gate
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions: {}
+
+jobs:
+  gate:
+    if: github.event.issue.pull_request
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      statuses: write
+      pull-requests: read
+    steps:
+      - name: Post the status on the head commit of the pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          head=$(gh api "repos/$REPO/pulls/$PR" --jq .head.sha)
+          gh api -X POST "repos/$REPO/statuses/$head" -f state=success -f context=reviewed \
+            -f description="probe: workflow file from MAIN, github.sha=${GITHUB_SHA:0:7}, ref=$GITHUB_REF"
